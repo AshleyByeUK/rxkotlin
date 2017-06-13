@@ -1,0 +1,29 @@
+group 'uk.ashleybye'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '1.1.2-release-IJ2017.2-5'
+    ext.rxkotlin_version = '2.0.3'
+
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'kotlin'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "io.reactivex.rxjava2:rxkotlin:$rxkotlin_version"
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = '1.8'
+}
