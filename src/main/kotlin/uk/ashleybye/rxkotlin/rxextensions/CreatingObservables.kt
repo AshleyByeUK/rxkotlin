@@ -4,13 +4,16 @@ import io.reactivex.Observable
 import io.reactivex.ObservableOnSubscribe
 import java.math.BigInteger
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 fun main(args: Array<String>) {
     doExample({ CreatingObservables.exampleOne() }, "Example One: Single Subscriber")
     doExample({ CreatingObservables.exampleTwo() }, "Example Two: Single Subscriber - Custom Observable")
     doExample({ CreatingObservables.exampleThree() }, "Example Three: Multiple Subscribers")
     doExample({ CreatingObservables.exampleFour() }, "Example Four: Infinite Stream")
-    doExample({ CreatingObservables.exampleFive() }, "Example Five: Handling Errors - fromCallable()")
+    doExample({ CreatingObservables.exampleFive() }, "Example Five: Interrupting a Thread")
+    doExample({ CreatingObservables.exampleSix() }, "Example Six: Handling Errors - fromCallable()")
+    doExample({ CreatingObservables.exampleSeven() }, "Example Seven: Timer and Interval")
 
     doExample({ CreatingObservables.exerciseOne() }, "Exercise One")
 }
@@ -21,6 +24,15 @@ private fun doExample(example: () -> Unit, title: String = "Example") {
     println()
 }
 
+/**
+ * Examples of how to create `Observable` objects. It should be noted that the explicit use of
+ * threads inside `create()` is discouraged. Explicitly using threads makes it possible for
+ * observers to receive notifications concurrently, which the Rx Design Guidelines prohibit.
+ * By assuming that observers will only process notifications one at a time allows them to be
+ * written synchronously, accessed by no more than one thread, even if events originate from
+ * multiple threads. The `serialize()` operator can be applied to enforce serialisation and
+ * synchronisation of events that originate from multiple threads concurrently.
+ */
 private object CreatingObservables {
 
     /**
@@ -108,6 +120,7 @@ private object CreatingObservables {
                     int = int.add(BigInteger.ONE)
                 }
             })
+            thread.name = "ExampleFourThread"
             thread.start()
         }
 
@@ -121,12 +134,46 @@ private object CreatingObservables {
     }
 
     /**
+     * Example Five: Interrupting a Thread.
+     *
+     * When a thread is interrupted, an `InterruptedException` is thrown inside `sleep()`. The
+     * thread stops immediately and `emitter.isDisposed == false`.
+     */
+    fun exampleFive() {
+        fun sleep(timeout: Long, unit: TimeUnit) {
+            try {
+                unit.sleep(timeout)
+            } catch (ignore: InterruptedException) {
+                // Ignored.
+            }
+        }
+
+        fun <T> delayed(t: T): Observable<T> = Observable.create { emitter ->
+            val runnable = Runnable {
+                sleep(10, TimeUnit.SECONDS)
+                if (!emitter.isDisposed) {
+                    emitter.onNext(t)
+                    emitter.onComplete()
+                }
+            }
+            val thread = Thread(runnable)
+            thread.name = "ExampleFiveThread"
+            thread.start()
+            emitter.setCancellable { thread::interrupt }
+        }
+
+        log("Starting")
+        delayed(42).subscribe { log(it) }
+        log("Exit")
+    }
+
+    /**
      * Example Six: `Observable.fromCallable()`.
      *
      * Errors need to be caught within the observable and should be emitted to all subscribers. The
      * `fromCallable()` method below is equivalent to the `create()` method.
      */
-    fun exampleFive() {
+    fun exampleSix() {
         val observable = Observable.create<Int> { emitter ->
             try {
                 emitter.onNext(Random().nextInt())
@@ -144,6 +191,30 @@ private object CreatingObservables {
         log("Starting - Equivalent")
         equivalent.subscribe { log(it) }
         log("Exit - Equivalent")
+    }
+
+    /**
+     * Example Seven: Timer and Interval.
+     *
+     * Both `timer` anf `interval` create an `Observable` that uses threads underneath. Timer
+     * emits a Long value of zero after a specified delay then completes. Interval produces a
+     * sequence of Long, starting with zero, and places a fixed delay before each event including
+     * the first zero.
+     */
+    fun exampleSeven() {
+        log("Starting - Timer")
+        Observable
+                .timer(1, TimeUnit.SECONDS)
+                .subscribe { log(it.toString()) }
+        log("Exit - Timer")
+
+        log("Starting - Interval")
+        val interval = Observable
+                .interval(1_000_000 / 60, TimeUnit.MICROSECONDS)
+                .subscribe { log(it.toString()) }
+        Thread.sleep(150)
+        interval.dispose()
+        log("Exit - Interval")
     }
 
     /**
