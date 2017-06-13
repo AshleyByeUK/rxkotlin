@@ -2,11 +2,15 @@ package uk.ashleybye.rxkotlin.rxextensions
 
 import io.reactivex.Observable
 import io.reactivex.ObservableOnSubscribe
+import java.math.BigInteger
+import java.util.*
 
 fun main(args: Array<String>) {
     doExample({ CreatingObservables.exampleOne() }, "Example One: Single Subscriber")
     doExample({ CreatingObservables.exampleTwo() }, "Example Two: Single Subscriber - Custom Observable")
     doExample({ CreatingObservables.exampleThree() }, "Example Three: Multiple Subscribers")
+    doExample({ CreatingObservables.exampleFour() }, "Example Four: Infinite Stream")
+    doExample({ CreatingObservables.exampleFive() }, "Example Five: Handling Errors - fromCallable()")
 
     doExample({ CreatingObservables.exerciseOne() }, "Exercise One")
 }
@@ -42,12 +46,12 @@ private object CreatingObservables {
      * wrapped with `Subscriber<Int>` internally, which is passed to `create()`.
      */
     fun exampleTwo() {
-        val ints = Observable.create(ObservableOnSubscribe<Int> { observableEmitter ->
+        val ints = Observable.create(ObservableOnSubscribe<Int> { emitter ->
             log("Create")
-            observableEmitter.onNext(5)
-            observableEmitter.onNext(6)
-            observableEmitter.onNext(7)
-            observableEmitter.onComplete()
+            emitter.onNext(5)
+            emitter.onNext(6)
+            emitter.onNext(7)
+            emitter.onComplete()
             log("Completed")
         })
 
@@ -65,10 +69,10 @@ private object CreatingObservables {
      * operator. Note that with infinite streams, `cache()` can result in an OutOfMemoryError.
      */
     fun exampleThree() {
-        val intsNotCached = Observable.create<Int> { subscriber ->
+        val intsNotCached = Observable.create<Int> { emitter ->
             log("Create")
-            subscriber.onNext(42)
-            subscriber.onComplete()
+            emitter.onNext(42)
+            emitter.onComplete()
         }
 
         // Use of the cache() operator feeds cached values for subsequent subscribers.
@@ -86,6 +90,63 @@ private object CreatingObservables {
     }
 
     /**
+     * Example Four: Infinite Streams.
+     *
+     * The concept of an infinite stream can be thought of as a queue with an infinite source of
+     * values. Proper implementation of an infinite stream requires a means of knowing whether
+     * values should continue to be emitted for a given subscriber. The `subscribe()` method will
+     * block the calling thread infinitely, so a custom thread should be initialised for each
+     * subscriber (use RxKotlin to interact with threads declaratively, although this example uses
+     * explicit concurrency).
+     */
+    fun exampleFour() {
+        val naturalNumbers = Observable.create<BigInteger> { emitter ->
+            val thread = Thread({
+                var int: BigInteger = BigInteger.ZERO
+                while (!emitter.isDisposed) {
+                    emitter.onNext(int)
+                    int = int.add(BigInteger.ONE)
+                }
+            })
+            thread.start()
+        }
+
+        val first = naturalNumbers.subscribe { log("First: $it") }
+        val second = naturalNumbers.subscribe { log("Second: $it") }
+
+        Thread.sleep(5)
+        first.dispose()
+        Thread.sleep(5)
+        second.dispose()
+    }
+
+    /**
+     * Example Six: `Observable.fromCallable()`.
+     *
+     * Errors need to be caught within the observable and should be emitted to all subscribers. The
+     * `fromCallable()` method below is equivalent to the `create()` method.
+     */
+    fun exampleFive() {
+        val observable = Observable.create<Int> { emitter ->
+            try {
+                emitter.onNext(Random().nextInt())
+                emitter.onComplete()
+            } catch (e: Exception) {
+                emitter.onError(e)
+            }
+        }
+        val equivalent = Observable.fromCallable<Int> { Random().nextInt() }
+
+        log("Starting - Observable")
+        observable.subscribe { log(it) }
+        log("Exit - Observable")
+
+        log("Starting - Equivalent")
+        equivalent.subscribe { log(it) }
+        log("Exit - Equivalent")
+    }
+
+    /**
      * First exercise.
      *
      * Using just `create()`, implement methods:
@@ -96,9 +157,9 @@ private object CreatingObservables {
      * range(start, count) - emits a range to an observer and then completes immediately.
      */
     fun exerciseOne() {
-        fun <T> just(item: T): Observable<T> = Observable.create { subscriber ->
-            subscriber.onNext(item)
-            subscriber.onComplete()
+        fun <T> just(item: T): Observable<T> = Observable.create { emitter ->
+            emitter.onNext(item)
+            emitter.onComplete()
         }
 
         fun <T> never(): Observable<T> = Observable.create { }
@@ -107,12 +168,12 @@ private object CreatingObservables {
             subscriber.onComplete()
         }
 
-        fun range(start: Int, count: Int): Observable<Int> = Observable.create { subscriber ->
+        fun range(start: Int, count: Int): Observable<Int> = Observable.create { emitter ->
             val ints = IntRange(start, start + count - 1).asSequence()
             for (int in ints) {
-                subscriber.onNext(int)
+                emitter.onNext(int)
             }
-            subscriber.onComplete()
+            emitter.onComplete()
         }
 
         just(10).subscribe { log("just(10): $it") }
