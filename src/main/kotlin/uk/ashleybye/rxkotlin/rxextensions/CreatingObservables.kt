@@ -6,6 +6,8 @@ import io.reactivex.ObservableOnSubscribe
 fun main(args: Array<String>) {
     doExample({ CreatingObservables.exampleOne() }, "Example One")
     doExample({ CreatingObservables.exampleTwo() }, "Example Two")
+
+    doExample({ CreatingObservables.exerciseOne() }, "Exercise One")
 }
 
 private fun doExample(example: () -> Unit, title: String = "Example") {
@@ -51,6 +53,42 @@ private object CreatingObservables {
         log("Starting")
         ints.subscribe { log("Element: $it") }
         log("Exit")
+    }
+
+    /**
+     * First exercise.
+     *
+     * Using just `create()`, implement methods:
+     *
+     * just(item) - emits a single value `item` to an observer and then completes immediately.
+     * never() - never emits to an observer.
+     * empty() - emits no items to an observer and then completes immediately.
+     * range(start, count) - emits a range to an observer and then completes immediately.
+     */
+    fun exerciseOne() {
+        fun <T> just(item: T): Observable<T> = Observable.create { subscriber ->
+            subscriber.onNext(item)
+            subscriber.onComplete()
+        }
+
+        fun <T> never(): Observable<T> = Observable.create { }
+
+        fun <T> empty(): Observable<T> = Observable.create { subscriber ->
+            subscriber.onComplete()
+        }
+
+        fun range(start: Int, count: Int): Observable<Int> = Observable.create { subscriber ->
+            val ints = IntRange(start, start + count - 1).asSequence()
+            for (int in ints) {
+                subscriber.onNext(int)
+            }
+            subscriber.onComplete()
+        }
+
+        just(10).subscribe { log("just(10): $it") }
+        never<Int>().subscribe { log("never(): $it") }
+        empty<Int>().subscribe { log("empty(): $it") }
+        range(10, 5).subscribe { log("range(10, 5): $it") }
     }
 
     /**
