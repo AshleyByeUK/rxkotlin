@@ -4,14 +4,15 @@ import io.reactivex.Observable
 import io.reactivex.ObservableOnSubscribe
 
 fun main(args: Array<String>) {
-    doExample({ CreatingObservables.exampleOne() }, "Example One")
-    doExample({ CreatingObservables.exampleTwo() }, "Example Two")
+    doExample({ CreatingObservables.exampleOne() }, "Example One: Single Subscriber")
+    doExample({ CreatingObservables.exampleTwo() }, "Example Two: Single Subscriber - Custom Observable")
+    doExample({ CreatingObservables.exampleThree() }, "Example Three: Multiple Subscribers")
 
     doExample({ CreatingObservables.exerciseOne() }, "Exercise One")
 }
 
 private fun doExample(example: () -> Unit, title: String = "Example") {
-    println("$title:")
+    println("\n$title\n")
     example.invoke()
     println()
 }
@@ -19,7 +20,7 @@ private fun doExample(example: () -> Unit, title: String = "Example") {
 private object CreatingObservables {
 
     /**
-     * First example.
+     * Example One: Single Subscriber.
      *
      * All messages are printed by the main client thread. Subscription also happens in the main
      * client thread. subscribe() blocks the client thread until all events are received.
@@ -33,7 +34,7 @@ private object CreatingObservables {
     }
 
     /**
-     * Second example.
+     * Example Two: Single Subscriber - Custom Observable.
      *
      * As with [exampleOne], all messages are printed by the main client thread. However, this time
      * the example shows how the observable does not start emitting until subscribe is called. Note
@@ -53,6 +54,35 @@ private object CreatingObservables {
         log("Starting")
         ints.subscribe { log("Element: $it") }
         log("Exit")
+    }
+
+    /**
+     * Example Three: Multiple Subscribers.
+     *
+     * Every time `subscribe()` is called, the subscription handler inside `create()` is invoked.
+     * Not great if there is some heavyweight computation inside `create()`, sharing of a single
+     * invocation amongst subscribers can be beneficial. This can be achieved using the `cache()`
+     * operator. Note that with infinite streams, `cache()` can result in an OutOfMemoryError.
+     */
+    fun exampleThree() {
+        val intsNotCached = Observable.create<Int> { subscriber ->
+            log("Create")
+            subscriber.onNext(42)
+            subscriber.onComplete()
+        }
+
+        // Use of the cache() operator feeds cached values for subsequent subscribers.
+        val intsCached = intsNotCached.cache()
+
+        log("Starting - Not Cached")
+        intsNotCached.subscribe { log("Subscriber A: $it") }
+        intsNotCached.subscribe { log("Subscriber B: $it") }
+        log("Exit - Not Cached")
+
+        log("Starting - Cached")
+        intsCached.subscribe { log("Subscriber A: $it") }
+        intsCached.subscribe { log("Subscriber B: $it") }
+        log("Exit - Cached")
     }
 
     /**
