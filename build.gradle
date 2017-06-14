@@ -2,8 +2,10 @@ group 'uk.ashleybye'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.1.2-release-IJ2017.2-5'
+    ext.kotlin_version = '1.1.2-5'
     ext.rxkotlin_version = '2.0.3'
+
+    ext.twitter4j_version = '4.0.4'
 
     repositories {
         jcenter()
@@ -21,7 +23,11 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+//    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "io.reactivex.rxjava2:rxkotlin:$rxkotlin_version"
+
+    compile "org.twitter4j:twitter4j-core:$twitter4j_version"
+    compile "org.twitter4j:twitter4j-stream:$twitter4j_version"
 }
 
 compileKotlin {

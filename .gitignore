@@ -3,5 +3,5 @@
 .gradle
 build
 !gradle-wrapper.jar
-java
 *.jar
+/twitter4j.properties
