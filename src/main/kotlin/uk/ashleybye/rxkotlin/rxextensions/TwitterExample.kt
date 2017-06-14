@@ -2,16 +2,17 @@ package uk.ashleybye.rxkotlin.rxextensions
 
 import io.reactivex.Observable
 import io.reactivex.subjects.PublishSubject
-import java.util.concurrent.TimeUnit
 import twitter4j.StallWarning
 import twitter4j.Status
 import twitter4j.StatusDeletionNotice
 import twitter4j.StatusListener
 import twitter4j.TwitterStreamFactory
 import uk.ashleybye.rxkotlin.helpers.Twitter4JHelper
+import java.util.concurrent.TimeUnit
 
 fun main(args: Array<String>) {
-  doNoSubjectExample()
+//  doNoSubjectExample()
+  doSubjectExample()
 }
 
 /**
@@ -21,6 +22,20 @@ fun main(args: Array<String>) {
  */
 private fun doNoSubjectExample() {
   val disposable = TwitterNoSubject().observe().subscribe(
+      { status -> println("Status: {$status)}") },
+      { error -> println("Error callback: $error") })
+
+  TimeUnit.SECONDS.sleep(10)
+  disposable.dispose()
+}
+
+/**
+ * Subscribes to a Twitter Status Subject and prints the stream of statuses to the standard
+ * output until the observer is disposed. This is achieved by calling `dispose()` after
+ * sleeping for 10 seconds.
+ */
+private fun doSubjectExample() {
+  val disposable = TwitterSubject().observe().subscribe(
       { status -> println("Status: {$status)}") },
       { error -> println("Error callback: $error") })
 
@@ -51,7 +66,7 @@ private class TwitterNoSubject {
    * Note that a Java wrapper is required when adding a `StatusListener` to the `TwitterStream`. This
    * prevents an `IllegalAccessError` being thrown. See link below.
    */
-  fun observe() = Observable.create<Status> { emitter ->
+   fun observe() = Observable.create<Status> { emitter ->
     val twitterStream = TwitterStreamFactory().instance
     // See: https://stackoverflow.com/questions/37672023/how-to-create-an-instance-of-anonymous-interface-in-kotlin/37672334
     val listner = object : StatusListener {
@@ -94,4 +109,50 @@ private class TwitterNoSubject {
 
     emitter.setCancellable { twitterStream::shutdown }
   }
+}
+
+
+/**
+ * Similar to the example [TwitterNoSubject], but this version uses a Subject to manage subscribers.
+ * To keep the implementation simple, the connection to the Twitter API is eager (events will
+ * already be flowing when the first subscriber subscribes) and we do not keep track of subscribers.
+ */
+private class TwitterSubject {
+  val subject = PublishSubject.create<Status>()
+
+  init {
+    val twitterStream = TwitterStreamFactory().instance
+    // See: https://stackoverflow.com/questions/37672023/how-to-create-an-instance-of-anonymous-interface-in-kotlin/37672334
+    val listner = object : StatusListener {
+      override fun onStatus(status: Status?) {
+        subject.onNext(status)
+      }
+
+      override fun onException(ex: Exception?) {
+        subject.onError(ex)
+      }
+
+      override fun onTrackLimitationNotice(numberOfLimitedStatuses: Int) {
+        // Not implemented.
+      }
+
+      override fun onStallWarning(warning: StallWarning?) {
+        // Not implemented.
+      }
+
+      override fun onDeletionNotice(statusDeletionNotice: StatusDeletionNotice?) {
+        // Not implemented.
+      }
+
+      override fun onScrubGeo(userId: Long, upToStatusId: Long) {
+        // Not implemented.
+      }
+    }
+
+    Twitter4JHelper.addStatusListner(twitterStream, listner)
+
+    twitterStream.sample()
+  }
+
+  fun observe(): Observable<Status> = subject
 }
