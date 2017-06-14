@@ -12,7 +12,8 @@ import java.util.concurrent.TimeUnit
 
 fun main(args: Array<String>) {
 //  doNoSubjectExample()
-  doSubjectExample()
+//  doSubjectExample()
+  doConnectableObservableExample()
 }
 
 /**
@@ -41,6 +42,86 @@ private fun doSubjectExample() {
 
   TimeUnit.SECONDS.sleep(10)
   disposable.dispose()
+}
+
+/**
+ * Using ConnectedObservable, we can manage multiple observers and share one connection to the
+ * upstream observable. The `publish()` method returns a `ConnectedObservable` which is then
+ * wrapped with a `refCount()` that keeps track of the number of observers. When the first
+ * observer subscribes, the observable begins emitting. Any new subscribers do not use a new
+ * connection and the same upstream connection is shared. The reverse is true when disposing of
+ * observers. The `share()` method is an alias for `publish().refCount()`.
+ *
+ * This is demonstrated using two observers. The output showing when connection and disconnection
+ * occur, the number of subscriptions and the number of disposals, is added to a list to avoid
+ * having to trawl through the emitted output to find them.
+ */
+private fun doConnectableObservableExample() { // Alias share().
+  val output = ArrayList<String>()
+  val observable = Observable.create<Status> { emitter ->
+    output.add("Establishing connection")
+    val twitterStream = TwitterStreamFactory().instance
+    val listener = object: StatusListener {
+      override fun onStatus(status: Status?) {
+        if (emitter.isDisposed) {
+          twitterStream.shutdown()
+        } else {
+          emitter.onNext(status)
+        }
+      }
+
+      override fun onException(ex: Exception?) {
+        if (emitter.isDisposed) {
+          twitterStream.shutdown()
+        } else {
+          emitter.onError(ex)
+        }
+      }
+
+      override fun onTrackLimitationNotice(numberOfLimitedStatuses: Int) {
+        // Not implemented.
+      }
+
+      override fun onStallWarning(warning: StallWarning?) {
+        // Not implemented.
+      }
+
+      override fun onDeletionNotice(statusDeletionNotice: StatusDeletionNotice?) {
+        // Not implemented.
+      }
+
+      override fun onScrubGeo(userId: Long, upToStatusId: Long) {
+        // Not implemented.
+      }
+    }
+
+    fun closeStream() {}
+
+    Twitter4JHelper.addStatusListner(twitterStream, listener)
+    twitterStream.sample()
+    emitter.setCancellable {
+      twitterStream::shutdown
+      output.add("Disconnecting")
+    }
+  }
+
+  // Publish() returns ConnectableObservable.
+  val lazy = observable.publish().refCount()
+  val sub1 = lazy.subscribe()
+  output.add("Subscribed 1")
+  TimeUnit.SECONDS.sleep(5)
+  val sub2 = lazy.subscribe()
+  output.add("Subscribed 2")
+  TimeUnit.SECONDS.sleep(5)
+  sub1.dispose()
+  output.add("Disposed 1")
+  TimeUnit.SECONDS.sleep(5)
+  sub2.dispose()
+  output.add("Disposed 2")
+
+  for (string in output) {
+    println(string)
+  }
 }
 
 /**
