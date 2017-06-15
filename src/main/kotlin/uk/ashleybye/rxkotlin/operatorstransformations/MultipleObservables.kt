@@ -2,6 +2,9 @@ package uk.ashleybye.rxkotlin.operatorstransformations
 
 import io.reactivex.Observable
 import io.reactivex.rxkotlin.zipWith
+import uk.ashleybye.rxkotlin.operatorstransformations.location.City
+import uk.ashleybye.rxkotlin.operatorstransformations.vacation.SimpleVacationPlanner
+import uk.ashleybye.rxkotlin.operatorstransformations.vacation.VacationPlanner
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
@@ -9,7 +12,7 @@ import java.util.concurrent.TimeUnit
 fun main(args: Array<String>) {
     doExample({ MultipleObservables.exampleOne() }, "Example One: Merge")
     doExample({ MultipleObservables.exampleTwo() }, "Example Two: Zip")
-    doExample({ MultipleObservables.exampleThree() })
+    doExample({ MultipleObservables.exampleThree() }, "Example Three: Vacation Planner")
 }
 
 private fun doExample(example: () -> Unit, title: String = "Example") {
@@ -49,7 +52,11 @@ class MultipleObservables {
         /**
          * Example Two: Zip.
          *
-         * Take more than one stream and zip the results together.
+         * Take more than one stream and zip the results together. Zip operates on the assumption
+         * that the events emitted from each observable are related, therefore if one does not meet
+         * the requirements of any wrapping filters, etc., then the observable will not zip those
+         * events and will move on to the next ones. Furthermore, if one is in error or completes,
+         * then the event is propagated downstream.
          */
         fun exampleTwo() {
             val streamTemp = Observable
