@@ -23,7 +23,7 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-//    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "io.reactivex.rxjava2:rxkotlin:$rxkotlin_version"
 
     compile "org.twitter4j:twitter4j-core:$twitter4j_version"
