@@ -2,9 +2,11 @@ package uk.ashleybye.rxkotlin.operatorstransformations
 
 import io.reactivex.Observable
 import io.reactivex.Single
+import io.reactivex.rxkotlin.zipWith
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 
 fun main(args: Array<String>) {
@@ -13,6 +15,7 @@ fun main(args: Array<String>) {
     doExample({ AdvancedOperators.exampleThree() }, "Example Three: Reduce")
     doExample({ AdvancedOperators.exampleFour() }, "Example Four: Collect")
     doExample({ AdvancedOperators.exampleFive() }, "Example Five: Distinct")
+    doExample({ AdvancedOperators.exampleSix() }, "Example Six: merge(), concat() and switchOnNext()")
 }
 
 private fun doExample(example: () -> Unit, title: String = "Example") {
@@ -169,5 +172,121 @@ class AdvancedOperators {
                     { println() }
             )
         }
+
+        /**
+         * Example Six: merge(), concat() and switchOnNext().
+         *
+         * Uses helper function [speak], see method comments for how it operates. The example is
+         * meant to represent three people on a stage with a microphone, each speaking at slightly
+         * different rates. It highlights how `merge()`, `concat()` and `switchOnNext()` differ.
+         *
+         * Merge: This simulates all three people speaking at the same time. The result is chaos
+         * and only due to prefixing each word with the name of the speaker is it possible to
+         * distinguish who is speaking - all that would be heard is noise. This shows how `merge()`
+         * subscribes to each stream immediately and forwards each event downstream as soon as it is
+         * emitted - there is no buffering or halting.
+         *
+         * Concat: This simulates each person speaking their phrase in turn. Concat first subscribes
+         * to Alice, when she completes Bob is subscribed to, and so on.
+         *
+         * Switch on Next: This simulates one person starting to speak after a random period of time
+         * has elapsed. After another random period of time, the next person starts speaking, and
+         * the rules are that the previous person stops and cannot say any more. The random delay is
+         * used to show how `switchOnNext()` works. This operator subscribes to an outer observable
+         * which emits inner observables. When the first inner observable begins emitting,
+         * `switchOnNext()` subscribes to it. When the next inner observable begins emitting,
+         * `switchOnNext()` subscribes to it and ignores the first, even if it continues to emit new
+         * events. This pattern continues for all remaining inner observables. Without using a
+         * random delay, all inner observables would begin emitting at the same time and it would
+         * not be possible to examine how `switchOnNext()` works. To view the result of this
+         * operator, it is necessary to subscribe to an `Observable<Observable<String>>`, which is
+         * the type of `quotes`.
+         */
+        fun exampleSix() {
+            val alice = speak("To be, or not to be: that is the question", 110)
+            val bob = speak("Though this be madness, yet there is method in't", 90)
+            val jane = speak("There are more things in Heaven and Earth, " +
+                    "Horatio, than are dreamt of in your philosophy", 100)
+
+            // merge().
+            println("\nMerge:\n")
+            Observable
+                    .merge(
+                            alice.map { word -> "Alice: $word" },
+                            bob.map { word -> "Bob: $word" },
+                            jane.map { word -> "Jane: $word" }
+                    ).subscribe(::println)
+            TimeUnit.SECONDS.sleep(10)
+
+            // concat().
+            println("\nConcat:\n")
+            Observable
+                    .concat(
+                            alice.map { word -> "Alice: $word" },
+                            bob.map { word -> "Bob: $word" },
+                            jane.map { word -> "Jane: $word" }
+                    ).subscribe(::println)
+            TimeUnit.SECONDS.sleep(20)
+
+            // switchOnNext().
+            println("\nSwitch on Next\n")
+            val random = Random()
+            val quotes = Observable
+                    .just(
+                            alice.map { word -> "Alice: $word" },
+                            bob.map { word -> "Bob: $word" },
+                            jane.map { word -> "Jane: $word" }
+                    ).flatMap { innerObservable ->
+                Observable.just(innerObservable)
+                        .delay(random.nextInt(5).toLong(), TimeUnit.SECONDS)
+            }
+            Observable
+                    .switchOnNext(quotes)
+                    .subscribe(::println)
+            TimeUnit.SECONDS.sleep(15)
+        }
     }
+}
+
+/**
+ * Turns strings into stream of words with a delay for each word.
+ *
+ * Takes a string and returns a stream of each word in the original string, with each word delayed
+ * by the computed delay of number of millis per character in the word.
+ *
+ * Examining the implementation, first punctuation is removed from the string, which is subsequently
+ * split into a list of words. For each word, the length of time taken to "say" that word is
+ * calculated by multiplying the word length by `millisPerChar`. However, to ensure that the stream
+ * remains in the correct order, the delays need to be cumulative. That is, if the first word takes
+ * 100 millis, the second 150, the third 200 and so on, the first word needs to appear with 0 delay
+ * (this is covered later), the second after 100 millis, the third after 250 millis (100 + 150), the
+ * fourth after 450 millis (250 + 200), etc. This is where `scan()` is useful - it keeps an
+ * accumulated value but also emits each intermediate total, exactly what is required. Finally, the
+ * stream of words needs to be returned to the client with the correct delays applied to each. This
+ * is achieved by zipping the words with the helper stream `absoluteDelay` to produce a
+ * `Pair<String, Long>`: the word and its associated delay. The last step is to `flatMap()` the
+ * string with the delay for each pair, resulting in an `Observable<String>` delayed by the
+ * required amount of time, i.e. each pair is a one element `Observable` shifted in time.
+ */
+private fun speak(quote: String, millisPerChar: Long): Observable<String> {
+    val tokens = quote.replace("[:,]", "").split(" ")
+    val words = Observable.fromIterable(tokens)
+    val absoluteDelay = words
+            .map(String::length)
+            .map { len -> len * millisPerChar }
+            .scan { total, current -> total + current }
+
+    return words
+            .zipWith(absoluteDelay.startWith(0L), { word, delay ->
+                Pair<String, Long>(word, delay)
+            })
+            // Using destructuring, the following can be re-written as shown below:
+//            .flatMap { pair ->
+//                Observable.just(pair.first)
+//                        .delay(pair.second, TimeUnit.MILLISECONDS)
+//            }
+            .flatMap { (first, second) ->
+                Observable.just(first)
+                        .delay(second, TimeUnit.MILLISECONDS)
+            }
 }
