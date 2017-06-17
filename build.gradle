@@ -6,6 +6,7 @@ buildscript {
     ext.rxkotlin_version = '2.0.3'
 
     ext.twitter4j_version = '4.0.4'
+    ext.guava_version = '22.0'
 
     repositories {
         jcenter()
@@ -28,6 +29,7 @@ dependencies {
 
     compile "org.twitter4j:twitter4j-core:$twitter4j_version"
     compile "org.twitter4j:twitter4j-stream:$twitter4j_version"
+    compile "com.google.guava:guava:$guava_version"
 }
 
 compileKotlin {
