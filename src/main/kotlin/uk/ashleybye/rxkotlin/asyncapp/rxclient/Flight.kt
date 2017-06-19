@@ -1,5 +1,6 @@
 package uk.ashleybye.rxkotlin.asyncapp.rxclient
 
+
 data class Flight(
         val id: String,
         val airline: String,

@@ -10,6 +10,7 @@ import io.reactivex.netty.protocol.tcp.server.TcpServer
 import java.math.BigDecimal
 import java.util.concurrent.TimeUnit
 
+
 fun main(args: Array<String>) {
     val server = EurUsdCurrencyTcpServer()
     server.run()

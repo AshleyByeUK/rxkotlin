@@ -4,6 +4,7 @@ import io.reactivex.Observable
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+
 private val tickets = mutableListOf<Ticket>()
 
 fun main(args: Array<String>) {

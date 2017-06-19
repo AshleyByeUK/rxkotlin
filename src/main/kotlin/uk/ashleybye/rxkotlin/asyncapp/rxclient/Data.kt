@@ -4,6 +4,7 @@ import io.reactivex.Observable
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+
 object Data {
 
     private val MAX_LATENCY = 2000

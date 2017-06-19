@@ -2,7 +2,6 @@ package uk.ashleybye.rxkotlin.asyncapp.rxclient
 
 import io.reactivex.Maybe
 import io.reactivex.Observable
-import io.reactivex.Single
 import io.reactivex.rxkotlin.zipWith
 import java.util.*
 import java.util.concurrent.TimeUnit

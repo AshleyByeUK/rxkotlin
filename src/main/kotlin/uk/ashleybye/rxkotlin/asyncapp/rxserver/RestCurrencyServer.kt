@@ -6,6 +6,7 @@ import io.reactivex.Observable
 import io.reactivex.netty.protocol.http.server.HttpServer
 import java.math.BigDecimal
 
+
 fun main(args: Array<String>) {
     val server = RestCurrencyServer()
     server.run()

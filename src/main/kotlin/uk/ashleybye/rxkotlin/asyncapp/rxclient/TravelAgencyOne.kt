@@ -2,6 +2,7 @@ package uk.ashleybye.rxkotlin.asyncapp.rxclient
 
 import io.reactivex.Observable
 
+
 class TravelAgencyOne(val name: String = "First Travel Agency") : TravelAgency {
 
     override fun search(user: User, location: GeoLocation): Observable<Flight> {
