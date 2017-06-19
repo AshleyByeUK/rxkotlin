@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit
 
 private val tickets = mutableListOf<Ticket>()
 
-// Make this RxLike - use merge!!!
 fun main(args: Array<String>) {
     val bookingService = RandomBookingService()
     val users = Data.users.toMutableList()
@@ -14,7 +13,7 @@ fun main(args: Array<String>) {
 
     Observable
             .fromIterable(users)
-            .flatMap { user -> book(user, bookingService) }
+            .flatMap { (id) -> bookingService.bookRandomTicketFor(id) }
             .subscribe(
                     {
                         Logger.log("Received: for ${it.forName}")
@@ -30,10 +29,5 @@ fun main(args: Array<String>) {
     for (ticket in tickets) {
         println("$ticket\n")
     }
-}
-
-fun book(user: User, bookingService: RandomBookingService): Observable<Ticket> {
-    return bookingService
-            .bookRandomTicketFor(user.id)
 }
 
