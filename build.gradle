@@ -7,6 +7,10 @@ buildscript {
 
     ext.twitter4j_version = '4.0.4'
     ext.guava_version = '22.0'
+    ext.commonsio_version = '2.4'
+    ext.netty_version = '4.1.12.Final'
+    ext.rxnetty_version = '0.5.2'
+    ext.rxinterop_version = '0.10.0' // Needed for RxNetty, which is not yet RxJava 2.x compatible.
 
     repositories {
         jcenter()
@@ -30,6 +34,12 @@ dependencies {
     compile "org.twitter4j:twitter4j-core:$twitter4j_version"
     compile "org.twitter4j:twitter4j-stream:$twitter4j_version"
     compile "com.google.guava:guava:$guava_version"
+    compile "commons-io:commons-io:$commonsio_version"
+    compile "io.netty:netty-all:$netty_version"
+    compile "io.reactivex:rxnetty-common:$rxnetty_version"
+    compile "io.reactivex:rxnetty-tcp:$rxnetty_version"
+    compile "io.reactivex:rxnetty-http:$rxnetty_version"
+    compile "com.github.akarnokd:rxjava2-interop:$rxinterop_version"
 }
 
 compileKotlin {
