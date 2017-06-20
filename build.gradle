@@ -12,15 +12,33 @@ buildscript {
     ext.rxnetty_version = '0.5.2'
     ext.rxinterop_version = '0.10.0' // Needed for RxNetty, which is not yet RxJava 2.x compatible.
 
+//    ext.junit_jupiter_version = '5.0.0-M4'
+//    ext.junit_runner_version = '1.0.0-M4'
+//    ext.spek_version = '1.1.2'
+    ext.kotlintest_version = '2.0.3'
+    ext.mockito_version = '2.7.22'
+    ext.truth_version = '0.32'
+
     repositories {
         jcenter()
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.junit.platform:junit-platform-gradle-plugin:$junit_runner_version"
     }
 }
 
 apply plugin: 'kotlin'
+apply plugin: 'org.junit.platform.gradle.plugin'
+
+//junitPlatform {
+//    platformVersion "$junit_runner_version"
+//    filters {
+//        engines {
+//            include 'spek', 'junit-jupiter'
+//        }
+//    }
+//}
 
 repositories {
     jcenter()
@@ -40,6 +58,22 @@ dependencies {
     compile "io.reactivex:rxnetty-tcp:$rxnetty_version"
     compile "io.reactivex:rxnetty-http:$rxnetty_version"
     compile "com.github.akarnokd:rxjava2-interop:$rxinterop_version"
+
+    testCompile "io.kotlintest:kotlintest:$kotlintest_version"
+    testCompile "org.mockito:mockito-core:$mockito_version"
+    testCompile "com.google.truth:truth:$truth_version"
+//    testCompile "org.junit.platform:junit-platform-runner:$junit_runner_version"
+//    testCompile "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+//    testCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+//    testCompile("org.jetbrains.spek:spek-api:$spek_version") {
+//        exclude group: "org.jetbrains.kotlin" // Only needed whilst Spek and Kotlin versions differ.
+//    }
+//
+//    testRuntime "org.junit.jupiter:junit-jupiter-engine:$junit_jupiter_version"
+//    testRuntime("org.jetbrains.spek:spek-junit-platform-engine:$spek_version") {
+//        exclude group: "org.junit.platform" // Only needed whilst Spek and Kotlin versions differ.
+//        exclude group: "org.jetbrains.kotlin" // Only needed whilst Spek and Kotlin versions differ.
+//    }
 }
 
 compileKotlin {
