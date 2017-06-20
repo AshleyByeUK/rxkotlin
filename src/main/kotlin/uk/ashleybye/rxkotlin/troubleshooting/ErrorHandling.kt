@@ -271,7 +271,7 @@ object ErrorHandling {
 
         risky()
                 .timeout(1, TimeUnit.SECONDS)
-                .doOnError { println("Hmm... $it") }
+//                .doOnError { println("Hmm... $it") }
                 .retryWhen { failures ->
                     failures
                             .zipWith(
