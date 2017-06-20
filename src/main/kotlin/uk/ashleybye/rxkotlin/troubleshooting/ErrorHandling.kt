@@ -1,5 +1,6 @@
 package uk.ashleybye.rxkotlin.troubleshooting
 
+import io.reactivex.functions.Function
 import io.reactivex.Observable
 import io.reactivex.rxkotlin.zipWith
 import java.time.LocalDate
@@ -123,9 +124,8 @@ object ErrorHandling {
 
         nextSolarEclipse(LocalDate.now())
                 .timeout<Long, Long>(
-                        //TODO(Ash): Why doesn't this work?
-                        { Observable.timer(400, TimeUnit.MILLISECONDS) },
-                        { _ -> Observable.timer(40, TimeUnit.MILLISECONDS) }
+                        Observable.timer(400, TimeUnit.MILLISECONDS),
+                        Function { Observable.timer(40, TimeUnit.MILLISECONDS) }
                 )
                 .subscribe(
                         { println(it) },
